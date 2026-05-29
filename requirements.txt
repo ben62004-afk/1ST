@@ -1,0 +1,9 @@
+# Pinned for deterministic, reproducible builds (Plan: 全程確定性).
+# Resolved versions captured 2026-05-29 on Python 3.11.
+pandas==3.0.3
+numpy==2.4.6
+pyarrow==24.0.0
+duckdb==1.5.3
+requests==2.33.1
+pytest==9.0.3
+exchange_calendars==4.13.2
