@@ -1,0 +1,133 @@
+# =============================================================================
+# 桃園站前房地產市場分析 Workflow
+# Taoyuan Station-front Real Estate Market Analysis Pipeline
+# =============================================================================
+# 目標：蒐集本月最新成交價格與利率變動，並行監測 10 個房地產平台掛牌資訊，
+#       清洗數據、進行流動性風險分析，最後產出各區「溢價潛力對比報告」。
+#
+# 執行方式：
+#   - 由協調器 (orchestrator) 依 phase 順序執行；同一 phase 內的 task 可並行。
+#   - 每個 task 對應一個子代理 (sub-agent)，prompt 定義於 agents/ 目錄。
+#   - 產物寫入 data/ 與 reports/，供下游 phase 取用。
+# =============================================================================
+
+name: taoyuan-station-realestate
+version: "1.0"
+description: 桃園站前房地產市場本月成交價、利率變動與各區溢價潛力分析
+schedule: "monthly"          # 建議每月執行一次（實價登錄每月更新）
+locale: zh-TW
+
+# 分析目標區域（桃園站前生活圈次分區）
+target_areas:
+  - 站前商圈
+  - 中正藝文特區
+  - 經國重劃區
+  - 大有商圈
+  - 同德/慈文重劃區
+  - 小檜溪重劃區
+
+# 全域參數
+params:
+  period: "current_month"    # 蒐集本月最新資料
+  property_types: [大樓, 華廈, 公寓, 套房]
+  currency: TWD
+  price_unit: 萬元/坪         # 單價統一換算為「萬元/坪」
+
+# -----------------------------------------------------------------------------
+# Phase 1 — 數據蒐集（並行）
+#   10 個平台監測子代理 + 1 個利率監測子代理同時啟動
+# -----------------------------------------------------------------------------
+phases:
+  - id: collect
+    name: 數據蒐集
+    mode: parallel
+    tasks:
+      - id: agent-01-591
+        agent: platform_monitor
+        source: 591房屋交易網 (591.com.tw)
+        output: data/raw/591.json
+      - id: agent-02-rakuya
+        agent: platform_monitor
+        source: 樂屋網 (rakuya.com.tw)
+        output: data/raw/rakuya.json
+      - id: agent-03-yungching
+        agent: platform_monitor
+        source: 永慶房屋 (yungching.com.tw)
+        output: data/raw/yungching.json
+      - id: agent-04-sinyi
+        agent: platform_monitor
+        source: 信義房屋 (sinyi.com.tw)
+        output: data/raw/sinyi.json
+      - id: agent-05-hbhousing
+        agent: platform_monitor
+        source: 住商不動產 (hb-housing.com.tw)
+        output: data/raw/hbhousing.json
+      - id: agent-06-twhg
+        agent: platform_monitor
+        source: 台灣房屋 (twhg.com.tw)
+        output: data/raw/twhg.json
+      - id: agent-07-cthouse
+        agent: platform_monitor
+        source: 中信房屋 (cthouse.com.tw)
+        output: data/raw/cthouse.json
+      - id: agent-08-housefun
+        agent: platform_monitor
+        source: 好房網 (housefun.com.tw)
+        output: data/raw/housefun.json
+      - id: agent-09-ubee
+        agent: platform_monitor
+        source: 屋比 (ubee.tw)
+        output: data/raw/ubee.json
+      - id: agent-10-lvr
+        agent: platform_monitor
+        source: 內政部實價登錄 (lvr.land.moi.gov.tw)   # 官方成交基準
+        output: data/raw/lvr.json
+      # 利率監測（與平台監測並行）
+      - id: agent-rate
+        agent: rate_monitor
+        source: 中央銀行 + 主要行庫房貸利率
+        output: data/raw/rates.json
+
+  # ---------------------------------------------------------------------------
+  # Phase 2 — 數據清洗 + 流動性風險分析（並行，依賴 collect）
+  # ---------------------------------------------------------------------------
+  - id: process
+    name: 數據清洗與分析
+    mode: parallel
+    depends_on: [collect]
+    tasks:
+      - id: clean
+        agent: data_cleaner
+        inputs: data/raw/*.json
+        output: data/clean/listings.csv
+        # 去重、單位統一、離群值剔除、跨平台同物件合併、實價登錄校準
+      - id: liquidity
+        agent: liquidity_analyst
+        inputs: data/clean/listings.csv
+        output: data/analysis/liquidity.csv
+        depends_on: [clean]
+        # 各區去化天數 (DOM)、掛牌量、降價率、成交/掛牌比 → 流動性風險評分
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 — 溢價潛力對比報告（彙整）
+  # ---------------------------------------------------------------------------
+  - id: report
+    name: 溢價潛力對比報告
+    mode: sequential
+    depends_on: [process]
+    tasks:
+      - id: synthesize
+        agent: report_writer
+        inputs:
+          - data/clean/listings.csv
+          - data/analysis/liquidity.csv
+          - data/raw/rates.json
+        output: reports/premium-potential-report.md
+        template: templates/premium-report.md
+
+# 失敗處理：單一平台失敗不阻斷整體；至少 6/10 平台 + 實價登錄成功才進入 Phase 2
+policy:
+  collect_min_success: 6
+  required_sources: [agent-10-lvr, agent-rate]
+  on_partial_failure: continue
+  retry: { attempts: 3, backoff_seconds: [2, 4, 8] }

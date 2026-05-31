@@ -1,0 +1,6 @@
+# 執行期產物不納版控（保留目錄結構用 .gitkeep）
+data/raw/*
+data/clean/*
+data/analysis/*
+reports/*
+!**/.gitkeep
