@@ -1,0 +1,7 @@
+area,liquidity_subscore,liquidity_risk_score,liquidity_risk_level,evidence,low_confidence
+中正藝文特區,70,30,低,成熟知名、買盤穩定、年成交約92戶、稀缺性高,false
+大有商圈,68,32,低,成熟生活圈、中古流通性佳、新供給少,true
+小檜溪重劃區,62,38,中,房仲稱即戰力強/不會有賣壓但單價高、換手對象有限,false
+同德/慈文重劃區,60,40,中,成熟住宅流通尚可、樣本少,true
+經國重劃區,58,42,中,新區需求靠通勤族、推案多有供給壓力,false
+站前商圈,55,45,中,中古老屋+地下化施工、需求外移至重劃區,false

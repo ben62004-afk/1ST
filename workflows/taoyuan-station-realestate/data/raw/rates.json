@@ -1,0 +1,39 @@
+{
+  "as_of": "2026-05-31",
+  "period_note": "央行/五大行庫房貸數據最新可得為 2026 年 1–4 月;5 月數據尚未公布",
+  "cbc_rediscount_rate": 2.000,
+  "cbc_changed_this_month": false,
+  "cbc_stance": "連續凍結政策利率(2025-12、2026-03 理監事會均維持 2%);市場預期最快 2026-06 可能升息,機率升溫但尚未實施",
+  "mortgage_rates": {
+    "five_banks_new_mortgage_pct": {
+      "2026-01": 2.327,
+      "2026-02": 2.322,
+      "2026-04": 2.307
+    },
+    "trend": "高檔盤整、微幅回落(2026-01 為 2009 以來 17 年新高,2-4 月略降)",
+    "mom_change_bps_apr": 0.1,
+    "new_mortgage_amount_apr_yi": 533.36,
+    "new_mortgage_amount_mom_yi": -56.88,
+    "amount_note": "4 月新承做房貸金額單月大減 56.88 億,顯示量縮、買氣降溫"
+  },
+  "first_home_program": {
+    "name": "新青安",
+    "current_min_rate_pct": 1.775,
+    "deadline": "2026-07-31 結束申請(利率補貼同步落日)",
+    "version2_rumor": "2.0 版傳利率升至 2.3%+、寬限期 5→3 年、新增『80 條款』(年齡+年限≤80)",
+    "impact": "低總價/首購產品最受衝擊,月付金跳升、成數不足"
+  },
+  "credit_control": {
+    "wave": "第七波選擇性信用管制",
+    "2026_change": "2026-03-20 起放寬:自然人第二戶購屋貸款成數由 5 成調升至 6 成",
+    "total_quota": "2026 起銀行不動產貸款總量管制回歸各銀行內部控管"
+  },
+  "sources": [
+    "https://www.cbc.gov.tw/tw/lp-640-1-1-20.html",
+    "https://www.cbc.gov.tw/tw/np-528-1.html",
+    "https://money.udn.com/money/story/122376/9345059",
+    "https://www.ctee.com.tw/news/20260203700726-430601",
+    "https://houseloan.tw/",
+    "https://www.cbc.gov.tw/tw/cp-302-189508-c6f08-1.html"
+  ]
+}
