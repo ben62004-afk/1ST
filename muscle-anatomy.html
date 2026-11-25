@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>肌肉動態解剖模型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f2ed; --panel:#fffdfa; --ink:#2b2724; --muted:#7a716a; --line:#e7dfd5;
+  --idle:#e6dcd1; --idle-stroke:#c8baab; --skin:#efe5da; --skin-stroke:#b9ab9c;
+  --equip:#8d857e; --equip-soft:#cfc7bf;
+  --hot:#e0523a; --con:#e0523a; --ecc:#8a63d2; --iso:#3f88c5;
+  --prime:#e0523a; --syn:#e3902b; --stab:#3f88c5; --accent:#2b2724;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1b1917; --panel:#25221f; --ink:#f0ebe5; --muted:#a59c93; --line:#3a3530;
+    --idle:#3d3732; --idle-stroke:#5a524a; --skin:#3a342f; --skin-stroke:#665c52;
+    --equip:#a39a91; --equip-soft:#4c453f;
+    --hot:#ff6a4d; --con:#ff6a4d; --ecc:#a988f0; --iso:#5aa6e6;
+    --prime:#ff6a4d; --syn:#f0a548; --stab:#5aa6e6; --accent:#f0ebe5;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1b1917; --panel:#25221f; --ink:#f0ebe5; --muted:#a59c93; --line:#3a3530;
+  --idle:#3d3732; --idle-stroke:#5a524a; --skin:#3a342f; --skin-stroke:#665c52;
+  --equip:#a39a91; --equip-soft:#4c453f;
+  --hot:#ff6a4d; --con:#ff6a4d; --ecc:#a988f0; --iso:#5aa6e6;
+  --prime:#ff6a4d; --syn:#f0a548; --stab:#5aa6e6; --accent:#f0ebe5;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Zen Maru Gothic","PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+  line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 16px 48px}
+header h1{font-size:1.6rem;margin:0 0 4px;font-weight:700;letter-spacing:.02em}
+header p{margin:0;color:var(--muted);font-size:.95rem}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 16px}
+.tab{
+  font:inherit;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);
+  padding:8px 18px;border-radius:999px;cursor:pointer;font-weight:500;transition:.15s;
+}
+.tab small{color:var(--muted);margin-left:6px;font-size:.78em}
+.tab[aria-selected="true"]{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.tab[aria-selected="true"] small{color:var(--bg);opacity:.75}
+.grid{display:grid;grid-template-columns:1.15fr 1fr;gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:16px}
+.card h2{font-size:1.02rem;margin:0 0 10px;font-weight:700;display:flex;align-items:center;gap:8px}
+.card h2 .sub{color:var(--muted);font-weight:400;font-size:.82rem}
+svg{display:block;width:100%;height:auto}
+#side{aspect-ratio:440/400}
+.controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
+.btn{
+  font:inherit;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);
+  border-radius:999px;padding:6px 14px;cursor:pointer;font-weight:500;
+}
+.btn.on{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+input[type=range]{flex:1;min-width:120px;accent-color:var(--hot)}
+.phasebar{display:flex;height:10px;border-radius:999px;overflow:hidden;margin-top:12px;position:relative}
+.phasebar span{display:block;height:100%}
+.phasebar .cursor{position:absolute;top:-3px;width:4px;height:16px;border-radius:2px;background:var(--ink);transform:translateX(-2px)}
+.phaselabels{display:flex;font-size:.75rem;color:var(--muted);margin-top:4px}
+.phaselabels span{text-align:center}
+.status{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 12px;border-radius:999px;font-size:.85rem;font-weight:700;background:var(--bg);border:1px solid var(--line)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:18px;height:6px;border-radius:3px;vertical-align:middle;margin-right:5px}
+.anat{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.anat figure{margin:0;text-align:center}
+.anat figcaption{font-size:.82rem;color:var(--muted);margin-top:2px}
+.anat svg{max-height:440px}
+.m{stroke:var(--idle-stroke);stroke-width:.8;fill:var(--idle);cursor:pointer;transition:stroke-width .12s}
+.m.deep{stroke-dasharray:3 2;fill-opacity:.85}
+.m.hl{stroke:var(--ink);stroke-width:2}
+.bodyfill{fill:var(--skin);stroke:var(--skin-stroke);stroke-width:.8}
+.grad{height:8px;border-radius:999px;background:linear-gradient(90deg,var(--idle),var(--hot));flex:1;max-width:160px}
+.gradrow{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--muted);margin-top:6px}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{color:var(--muted);font-weight:500;font-size:.8rem}
+tr.mrow{cursor:pointer}
+tr.mrow:hover,tr.mrow.hl{background:color-mix(in oklab,var(--hot) 8%,transparent)}
+.mname b{font-weight:700}
+.mname small{display:block;color:var(--muted);font-size:.74rem}
+.role{font-size:.75rem;padding:2px 9px;border-radius:999px;font-weight:700;white-space:nowrap;color:#fff}
+.bar{height:8px;border-radius:999px;background:var(--bg);border:1px solid var(--line);overflow:hidden;min-width:70px}
+.bar>span{display:block;height:100%;background:var(--hot);border-radius:999px}
+.chip{font-size:.76rem;padding:2px 9px;border-radius:999px;font-weight:700;white-space:nowrap;border:1.5px solid currentColor}
+.lower{display:grid;grid-template-columns:1.35fr 1fr;gap:16px;margin-top:16px}
+ul.cues{margin:0;padding-left:1.2em}
+ul.cues li{margin:4px 0}
+.note{font-size:.78rem;color:var(--muted);margin-top:14px}
+#tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);padding:6px 10px;border-radius:10px;font-size:.8rem;opacity:0;transition:opacity .1s;z-index:9;max-width:220px}
+.scroll{overflow-x:auto}
+@media (max-width:860px){
+  .grid,.lower{grid-template-columns:1fr}
+  header h1{font-size:1.35rem}
+  .hide-sm{display:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>肌肉動態解剖模型</h1>
+    <p>選擇動作，觀察各肌肉在向心期、離心期與停頓時的長度變化、收縮型態與相對動用程度。</p>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist"></nav>
+
+  <section class="grid">
+    <div class="card">
+      <h2>側面動態 <span class="sub" id="exTitle"></span></h2>
+      <svg id="side" viewBox="0 0 440 400" aria-label="側面動作動畫">
+        <g id="equipBack"></g>
+        <g id="bodyG"></g>
+        <g id="bandG"></g>
+        <g id="equipFront"></g>
+      </svg>
+      <div class="phasebar" id="phasebar"><div class="cursor" id="cursor"></div></div>
+      <div class="phaselabels" id="phaselabels"></div>
+      <div class="controls">
+        <button class="btn on" id="play">暫停</button>
+        <button class="btn" data-speed="0.5">0.5x</button>
+        <button class="btn on" data-speed="1">1x</button>
+        <button class="btn" data-speed="1.5">1.5x</button>
+        <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="時間軸">
+      </div>
+      <div class="status">
+        <span class="pill" id="phasePill">向心期</span>
+        <span style="color:var(--muted);font-size:.85rem" id="phaseDesc"></span>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--con)"></i>向心（縮短）</span>
+        <span><i style="background:var(--ecc)"></i>離心（伸長）</span>
+        <span><i style="background:var(--iso)"></i>等長 / 穩定</span>
+        <span>線條粗細 = 動用程度 x 收縮程度</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>解剖對照 <span class="sub">滑鼠移到肌肉上查看</span></h2>
+      <div class="anat">
+        <figure>
+          <svg id="front" viewBox="0 0 200 420" aria-label="正面肌肉圖">
+            <g id="frontHalf">
+              <path class="m" data-m="trap_u" d="M106,58 C110,66 120,72 136,76 L112,78 C108,72 106,66 106,58 Z"/>
+              <path class="m" data-m="pec_c" d="M102,82 L128,82 C135,88 140,94 143,100 L102,98 Z"/>
+              <path class="m" data-m="pec_s" d="M102,99 L143,101 C146,107 147,112 146,116 C134,124 116,126 102,124 Z"/>
+              <path class="m" data-m="delt_a" d="M136,76 C150,76 160,88 159,106 C158,116 153,122 148,126 C144,112 138,100 128,88 C130,82 132,78 136,76 Z"/>
+              <path class="m" data-m="serratus" d="M140,122 L148,119 L149,129 L141,132 Z M140,134 L149,131 L149,141 L141,144 Z"/>
+              <path class="m" data-m="rectus" d="M101,126 L119,126 C121,152 121,180 119,208 L101,212 Z"/>
+              <path class="m" data-m="obliques" d="M120,126 L139,122 C145,142 144,170 137,196 L120,208 C122,180 122,152 120,126 Z"/>
+              <path class="m" data-m="biceps" d="M150,128 C157,132 161,144 161,158 C161,168 157,176 153,181 C147,173 144,161 144,149 C144,139 146,131 150,128 Z"/>
+              <path class="m" data-m="brachialis" d="M160,150 C164,160 164,172 159,183 L154,183 C158,172 160,162 160,150 Z"/>
+              <path class="m" data-m="forearm_f" d="M150,184 L156,184 C160,195 164,206 164,216 L171,215 C172,232 170,246 166,258 L156,258 C152,240 147,222 145,206 C144,196 146,189 150,184 Z"/>
+              <path class="m" data-m="brachiorad" d="M157,184 C165,189 170,200 171,214 L164,216 C162,204 159,194 154,186 Z"/>
+              <path class="bodyfill" d="M103,214 L137,200 C146,236 146,278 137,318 L113,322 C106,292 102,252 103,214 Z"/>
+              <path class="bodyfill" d="M114,330 L134,330 C138,358 134,388 129,404 L118,404 C113,382 112,354 114,330 Z"/>
+              <path class="bodyfill" d="M117,406 L131,406 L139,414 L116,414 Z"/>
+              <ellipse class="bodyfill" cx="163" cy="270" rx="7" ry="11"/>
+              <path d="M103,146 H118 M103,166 H119 M103,187 H118" stroke="var(--idle-stroke)" stroke-width=".8" fill="none" pointer-events="none"/>
+            </g>
+            <ellipse class="bodyfill" cx="100" cy="34" rx="17" ry="21"/>
+            <rect class="bodyfill" x="92" y="52" width="16" height="16" rx="4"/>
+          </svg>
+          <figcaption>正面</figcaption>
+        </figure>
+        <figure>
+          <svg id="back" viewBox="0 0 200 420" aria-label="背面肌肉圖">
+            <g id="backHalf">
+              <path class="m" data-m="trap_u" d="M101,56 L107,58 C111,66 122,72 138,77 L120,84 L101,84 Z"/>
+              <path class="m" data-m="trap_m" d="M101,84 L120,84 L138,78 C136,90 126,98 101,104 Z"/>
+              <path class="m" data-m="trap_l" d="M101,104 C114,101 122,103 120,112 C114,126 107,140 101,152 Z"/>
+              <path class="m" data-m="delt_p" d="M136,76 C150,76 160,88 159,106 C158,116 153,122 148,126 C144,112 138,100 128,88 C130,82 132,78 136,76 Z"/>
+              <path class="m" data-m="infra" d="M120,96 C130,96 137,100 141,108 C137,116 129,119 119,118 C118,110 118,102 120,96 Z"/>
+              <path class="m" data-m="teres" d="M126,120 L141,110 C145,116 146,122 144,127 L130,128 Z"/>
+              <path class="m" data-m="lats" d="M103,128 L118,120 L130,129 L144,128 C148,144 146,164 138,180 C130,194 118,204 104,212 Z"/>
+              <path class="m" data-m="erector" d="M101,152 L110,146 C113,170 113,192 111,214 L101,216 Z"/>
+              <path class="m deep" data-m="rhomb" d="M102,88 L117,92 L115,118 L102,126 Z"/>
+              <path class="m" data-m="triceps" d="M150,128 C157,132 161,144 161,158 C161,168 157,176 153,182 C147,174 144,161 144,149 C144,139 146,131 150,128 Z"/>
+              <path class="m" data-m="forearm_e" d="M150,184 L158,184 C164,196 170,210 171,226 C171,240 169,250 166,258 L156,258 C152,240 147,222 145,206 C144,196 146,189 150,184 Z"/>
+              <path class="bodyfill" d="M103,216 L134,208 C144,222 144,242 136,254 L104,258 Z"/>
+              <path class="bodyfill" d="M104,260 L136,256 C142,282 140,304 134,322 L112,324 C106,302 104,282 104,260 Z"/>
+              <path class="bodyfill" d="M114,330 L134,330 C140,350 138,372 130,390 L118,390 C112,372 110,350 114,330 Z"/>
+              <path class="bodyfill" d="M118,392 L130,392 L131,412 L117,412 Z"/>
+              <ellipse class="bodyfill" cx="163" cy="270" rx="7" ry="11"/>
+            </g>
+            <ellipse class="bodyfill" cx="100" cy="34" rx="17" ry="21"/>
+            <rect class="bodyfill" x="92" y="52" width="16" height="8" rx="3"/>
+          </svg>
+          <figcaption>背面（虛線 = 深層肌）</figcaption>
+        </figure>
+      </div>
+      <div class="gradrow"><span>動用程度</span><span>低</span><div class="grad"></div><span>高</span></div>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:16px">
+    <h2>參與肌群 <span class="sub">即時數值隨動畫更新</span></h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>肌肉</th><th>角色</th><th style="width:22%">即時動用</th><th>收縮型態</th><th class="hide-sm" style="width:16%">肌肉長度</th></tr></thead>
+        <tbody id="mbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="lower">
+    <div class="card">
+      <h2>關節動作</h2>
+      <div class="scroll">
+        <table><thead><tr><th>關節</th><th>向心期</th><th>離心期</th></tr></thead><tbody id="jbody"></tbody></table>
+      </div>
+    </div>
+    <div class="card">
+      <h2>動作要點</h2>
+      <ul class="cues" id="cues"></ul>
+    </div>
+  </section>
+
+  <p class="note">說明：動用程度為依常見 EMG 研究趨勢整理的相對示意值（0–100%），非個人實測數據；實際動用會因握距、軌跡、負重與個人結構而改變。側面圖為 2D 簡化模型，肌肉以起點至止點的連線表示，長度變化依關節角度即時計算。</p>
+</div>
+<div id="tip"></div>
+
+<script>
+(function(){
+"use strict";
+/* ---------- 向量工具 ---------- */
+const V=(x,y)=>({x,y});
+const add=(a,b)=>V(a.x+b.x,a.y+b.y), sub=(a,b)=>V(a.x-b.x,a.y-b.y), mul=(a,k)=>V(a.x*k,a.y*k);
+const len=a=>Math.hypot(a.x,a.y), norm=a=>{const l=len(a)||1;return V(a.x/l,a.y/l);};
+const dot=(a,b)=>a.x*b.x+a.y*b.y;
+const dir=d=>{const r=d*Math.PI/180;return V(Math.cos(r),Math.sin(r));};
+const lerp=(a,b,t)=>a+(b-a)*t;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const f1=n=>n.toFixed(1);
+const UA=58, FA=55, TL=105; // 上臂、前臂、軀幹長度
+
+/* 兩段式反向運動學：給肩與目標手位置，求肘位置 */
+function ik(S,target,pref){
+  let d=sub(target,S), D=len(d);
+  const max=UA+FA-0.5;
+  if(D>max){d=mul(norm(d),max);D=max;}
+  const W=add(S,d);
+  const a=Math.atan2(d.y,d.x);
+  const al=Math.acos(clamp((UA*UA+D*D-FA*FA)/(2*UA*D),-1,1));
+  const e1=add(S,mul(V(Math.cos(a+al),Math.sin(a+al)),UA));
+  const e2=add(S,mul(V(Math.cos(a-al),Math.sin(a-al)),UA));
+  const E=dot(sub(e1,S),pref)>=dot(sub(e2,S),pref)?e1:e2;
+  return {E,W};
+}
+function makePose(o){
+  const u=dir(o.tor), n=V(-u.y,u.x);          // u: 髖→肩, n: 身體前側
+  const S0=add(o.H,mul(u,TL));
+  const S=add(S0,add(mul(u,o.sh.u),mul(n,o.sh.n))); // 肩胛移動造成的肩關節位移
+  const {E,W}=ik(S,o.hand(S,S0),o.pref);
+  return Object.assign({u,n,S0,S,E,W},o);
+}
+
+/* ---------- 肌肉資料 ---------- */
+const MUS={
+  lats:{n:"背闊肌",en:"Latissimus dorsi"},
+  teres:{n:"大圓肌",en:"Teres major"},
+  trap_u:{n:"上斜方肌",en:"Upper trapezius"},
+  trap_m:{n:"中斜方肌",en:"Middle trapezius"},
+  trap_l:{n:"下斜方肌",en:"Lower trapezius"},
+  rhomb:{n:"菱形肌（深層）",en:"Rhomboids"},
+  delt_a:{n:"前三角肌",en:"Anterior deltoid"},
+  delt_p:{n:"後三角肌",en:"Posterior deltoid"},
+  infra:{n:"棘下肌",en:"Infraspinatus"},
+  pec_c:{n:"胸大肌（鎖骨部）",en:"Pec major, clavicular"},
+  pec_s:{n:"胸大肌（胸肋部）",en:"Pec major, sternocostal"},
+  serratus:{n:"前鋸肌",en:"Serratus anterior"},
+  biceps:{n:"肱二頭肌",en:"Biceps brachii"},
+  brachialis:{n:"肱肌",en:"Brachialis"},
+  brachiorad:{n:"肱橈肌",en:"Brachioradialis"},
+  forearm_f:{n:"前臂屈肌群（握力）",en:"Forearm flexors"},
+  forearm_e:{n:"前臂伸肌群",en:"Forearm extensors"},
+  triceps:{n:"肱三頭肌",en:"Triceps brachii"},
+  rectus:{n:"腹直肌",en:"Rectus abdominis"},
+  obliques:{n:"腹斜肌",en:"Obliques"},
+  erector:{n:"豎脊肌",en:"Erector spinae"}
+};
+
+/* 側面圖中每條肌肉的起點→止點（依當前姿勢計算） */
+function frame(P){
+  const T=(f,o)=>add(add(P.H,mul(P.u,f*TL)),mul(P.n,o));
+  const ua=norm(sub(P.E,P.S)), uf=norm(sub(P.W,P.E));
+  let pa=V(-ua.y,ua.x); if(dot(pa,P.pref)>0) pa=mul(pa,-1);   // 上臂屈側
+  let pf=V(-uf.y,uf.x); if(dot(pf,P.pref)>0) pf=mul(pf,-1);   // 前臂屈側
+  const Ar=(f,o)=>add(add(P.S,mul(ua,f*UA)),mul(pa,o));
+  const scap=add(add(P.S,mul(P.u,-20)),mul(P.n,-13));          // 肩胛骨內緣代表點
+  return {T,Ar,ua,uf,pa,pf,scap};
+}
+const BAND={
+  lats:(P,F)=>[F.T(0.28,-15),F.Ar(0.22,0)],
+  teres:(P,F)=>[F.T(0.72,-16),F.Ar(0.24,0)],
+  pec_s:(P,F)=>[F.T(0.74,19),F.Ar(0.32,0)],
+  pec_c:(P,F)=>[F.T(0.97,10),F.Ar(0.28,0)],
+  delt_a:(P,F)=>[F.T(1.02,7),F.Ar(0.45,0)],
+  delt_p:(P,F)=>[F.T(1.0,-10),F.Ar(0.45,0)],
+  infra:(P,F)=>[F.scap,F.Ar(0.08,-3)],
+  trap_m:(P,F)=>[F.T(0.80,-22),F.scap],
+  rhomb:(P,F)=>[F.T(0.74,-21),F.scap],
+  trap_l:(P,F)=>[F.T(0.45,-20),F.scap],
+  serratus:(P,F)=>[F.T(0.60,12),F.scap],
+  biceps:(P,F)=>[F.Ar(0.12,5),add(add(P.E,mul(F.uf,10)),mul(F.pf,4))],
+  brachialis:(P,F)=>[F.Ar(0.52,4),add(add(P.E,mul(F.uf,8)),mul(F.pf,3))],
+  brachiorad:(P,F)=>[F.Ar(0.76,-1),add(P.E,mul(F.uf,48))],
+  forearm_f:(P,F)=>[add(add(P.E,mul(F.uf,4)),mul(F.pf,3)),add(add(P.E,mul(F.uf,50)),mul(F.pf,2))],
+  triceps:(P,F)=>[F.Ar(0.06,-6),add(add(P.E,mul(F.uf,-7)),mul(F.pa,-2))],
+  rectus:(P,F)=>[F.T(0.10,13),F.T(0.80,14)],
+  obliques:(P,F)=>[F.T(0.12,10),F.T(0.62,15)],
+  erector:(P,F)=>[F.T(0.08,-15),F.T(0.86,-17)]
+};
+
+/* ---------- 動作定義 ---------- */
+const EX={
+  pulldown:{
+    name:"滑輪下拉",en:"Lat Pulldown",
+    con:"向心期：手肘下拉至上胸",ecc:"離心期：控制回放至手臂伸直",
+    top:"頂峰收縮：肩胛下壓後縮",bot:"底部伸展：背闊肌拉長",
+    pose:p=>makePose({
+      H:V(175,288),tor:-98-4*p,sh:{u:lerp(6,-4,p),n:lerp(1,-4,p)},
+      hand:(S,S0)=>V(S0.x+20,lerp(S0.y-106,S0.y+8,p)),pref:V(-1,0.4),
+      K:V(255,286),A:V(259,358),foot:V(1,0)
+    }),
+    muscles:[
+      ["lats","主動肌",1],["teres","協同肌",0.7],["trap_l","協同肌",0.55],["rhomb","協同肌",0.5],
+      ["trap_m","協同肌",0.4],["delt_p","協同肌",0.45],["pec_s","協同肌",0.3],
+      ["biceps","協同肌",0.6],["brachialis","協同肌",0.55],["brachiorad","協同肌",0.5],
+      ["forearm_f","穩定肌",0.5],["rectus","穩定肌",0.25]
+    ],
+    joints:[["肩關節","內收＋伸展","外展＋屈曲"],["肘關節","屈曲","伸展"],["肩胛骨","下壓、下旋、後縮","上提、上旋、前伸"],["軀幹","維持微後傾（等長）","維持微後傾（等長）"]],
+    cues:["挺胸、軀幹微後傾約 10–20°，大腿以護墊固定","先下壓肩胛，再以「手肘往下、往後口袋收」帶動","握把拉至上胸 / 鎖骨附近，避免頸後下拉","離心期約 2 秒控制回放，讓背闊肌在頂端完整伸展"],
+    equip(P,p){
+      const lift=p*42, px=P.W.x, sx=380;
+      const back=`
+        <rect x="352" y="20" width="8" height="352" rx="3" fill="var(--equip-soft)"/>
+        <line x1="${f1(px)}" y1="24" x2="${sx}" y2="24" stroke="var(--equip)" stroke-width="5" stroke-linecap="round"/>
+        <rect x="${sx-18}" y="${f1(316-lift)}" width="36" height="56" rx="4" fill="var(--equip-soft)" stroke="var(--equip)"/>
+        <line x1="${sx}" y1="34" x2="${sx}" y2="${f1(316-lift)}" stroke="var(--equip)" stroke-width="1.5"/>
+        <circle cx="${sx}" cy="34" r="8" fill="var(--panel)" stroke="var(--equip)" stroke-width="2"/>
+        <rect x="${P.H.x-36}" y="${P.H.y+16}" width="74" height="11" rx="5" fill="var(--equip)"/>
+        <rect x="${P.H.x-3}" y="${P.H.y+27}" width="7" height="${f1(372-P.H.y-27)}" fill="var(--equip-soft)"/>
+        <rect x="${P.K.x-24}" y="${P.K.y-34}" width="32" height="12" rx="6" fill="var(--equip)"/>
+        <line x1="0" y1="373" x2="440" y2="373" stroke="var(--line)" stroke-width="2"/>`;
+      const front=`
+        <line x1="${f1(px)}" y1="40" x2="${f1(P.W.x)}" y2="${f1(P.W.y)}" stroke="var(--equip)" stroke-width="1.5"/>
+        <circle cx="${f1(px)}" cy="34" r="8" fill="var(--panel)" stroke="var(--equip)" stroke-width="2"/>
+        <circle cx="${f1(P.W.x)}" cy="${f1(P.W.y)}" r="5" fill="var(--ink)"/>`;
+      return {back,front};
+    }
+  },
+  bench:{
+    name:"平板胸推",en:"Flat Bench Press",
+    con:"向心期：由胸口推起至手臂伸直",ecc:"離心期：控制下放至胸口",
+    top:"頂端：手臂伸直、肩胛仍後收",bot:"底部：槓觸胸、胸大肌拉長",
+    pose:p=>makePose({
+      H:V(272,255),tor:180,sh:{u:0,n:-3},
+      hand:(S,S0)=>V(S0.x+14,lerp(S0.y-26,S0.y-108,p)),pref:V(0.4,1),
+      K:add(V(272,255),mul(dir(35),75)),A:add(add(V(272,255),mul(dir(35),75)),mul(dir(92),72)),foot:V(1,0)
+    }),
+    muscles:[
+      ["pec_s","主動肌",1],["pec_c","協同肌",0.75],["delt_a","協同肌",0.7],["triceps","主動肌",0.75],
+      ["serratus","穩定肌",0.4],["rhomb","穩定肌",0.3],["trap_m","穩定肌",0.25],
+      ["lats","穩定肌",0.25],["biceps","穩定肌",0.2],["forearm_f","穩定肌",0.3],["rectus","穩定肌",0.2]
+    ],
+    joints:[["肩關節","水平內收＋屈曲","水平外展＋伸展"],["肘關節","伸展","屈曲"],["肩胛骨","維持後縮下壓（等長）","維持後縮下壓（等長）"],["腕關節","保持中立、槓在掌根","保持中立"]],
+    cues:["躺下後先後收並下壓肩胛，雙腳踩穩地面","手肘外展約 45–70°，避免 90° 外張壓迫肩關節","槓下放至乳頭線至胸骨下緣，前臂盡量垂直地面","推起時想像「把胸口往槓靠近」，頂端不用力鎖死手肘"],
+    equip(P){
+      const back=`
+        <rect x="${P.S0.x+10}" y="130" width="7" height="242" rx="3" fill="var(--equip-soft)"/>
+        <rect x="${P.S0.x+4}" y="140" width="16" height="6" rx="3" fill="var(--equip-soft)"/>
+        <circle cx="${f1(P.W.x)}" cy="${f1(P.W.y)}" r="27" fill="none" stroke="var(--equip)" stroke-width="9" opacity=".45"/>
+        <rect x="105" y="273" width="200" height="12" rx="6" fill="var(--equip)"/>
+        <rect x="122" y="285" width="8" height="87" fill="var(--equip-soft)"/>
+        <rect x="282" y="285" width="8" height="87" fill="var(--equip-soft)"/>
+        <line x1="0" y1="373" x2="440" y2="373" stroke="var(--line)" stroke-width="2"/>`;
+      const front=`<circle cx="${f1(P.W.x)}" cy="${f1(P.W.y)}" r="5.5" fill="var(--ink)"/>`;
+      return {back,front};
+    }
+  },
+  row:{
+    name:"滑輪水平拉",en:"Seated Cable Row",
+    con:"向心期：握把拉向腹部",ecc:"離心期：控制回放、肩胛前伸",
+    top:"頂峰收縮：肩胛完全後縮",bot:"底部伸展：手臂伸直、上背拉長",
+    pose:p=>makePose({
+      H:V(122,292),tor:lerp(-74,-95,p),sh:{u:0,n:lerp(9,-7,p)},
+      hand:(S)=>V(lerp(S.x+95,166,p),240),pref:V(-0.4,1),
+      K:add(V(122,292),mul(dir(-10),74)),A:add(add(V(122,292),mul(dir(-10),74)),mul(dir(16),70)),foot:V(0,-1)
+    }),
+    muscles:[
+      ["lats","主動肌",0.85],["trap_m","主動肌",0.9],["rhomb","主動肌",0.9],["delt_p","協同肌",0.75],
+      ["teres","協同肌",0.6],["trap_l","協同肌",0.4],["infra","穩定肌",0.35],
+      ["biceps","協同肌",0.6],["brachialis","協同肌",0.55],["brachiorad","協同肌",0.55],
+      ["erector","穩定肌",0.45],["forearm_f","穩定肌",0.5],["rectus","穩定肌",0.25]
+    ],
+    joints:[["肩關節","伸展","屈曲"],["肘關節","屈曲","伸展"],["肩胛骨","後縮","前伸"],["軀幹","中立直立（豎脊肌等長）","微前傾但不彎背"]],
+    cues:["脊椎維持中立，避免靠身體大幅後仰借力","先後縮肩胛，再屈肘把握把拉向肚臍上方","手肘貼近身體向後，頂端停頓擠壓上背","回放時讓肩胛自然前伸，獲得完整伸展"],
+    equip(P){
+      const hy=240, px=400;
+      const back=`
+        <rect x="60" y="352" width="350" height="9" rx="4" fill="var(--equip-soft)"/>
+        <rect x="${P.H.x-40}" y="${P.H.y+16}" width="76" height="11" rx="5" fill="var(--equip)"/>
+        <rect x="${P.H.x-3}" y="${P.H.y+27}" width="7" height="${f1(352-P.H.y-27)}" fill="var(--equip-soft)"/>
+        <rect x="${f1(P.A.x+5)}" y="${f1(P.A.y-36)}" width="8" height="52" rx="3" fill="var(--equip)"/>
+        <line x1="${f1(P.A.x+9)}" y1="${f1(P.A.y+16)}" x2="${f1(P.A.x+9)}" y2="352" stroke="var(--equip-soft)" stroke-width="6"/>
+        <rect x="${px+4}" y="120" width="8" height="252" rx="3" fill="var(--equip-soft)"/>
+        <line x1="0" y1="373" x2="440" y2="373" stroke="var(--line)" stroke-width="2"/>`;
+      const front=`
+        <line x1="${f1(P.W.x)}" y1="${hy}" x2="${px}" y2="${hy}" stroke="var(--equip)" stroke-width="1.5"/>
+        <circle cx="${px}" cy="${hy}" r="8" fill="var(--panel)" stroke="var(--equip)" stroke-width="2"/>
+        <path d="M${f1(P.W.x)},${hy} l12,-7 M${f1(P.W.x)},${hy} l12,7 M${f1(P.W.x+12)},${hy-7} v14" stroke="var(--ink)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <circle cx="${f1(P.W.x)}" cy="${hy}" r="4.5" fill="var(--ink)"/>`;
+      return {back,front};
+    }
+  }
+};
+
+/* 預先取樣每條肌肉長度範圍（決定性計算） */
+function bandLen(ex,id,p){const P=ex.pose(clamp(p,0,1));const [a,b]=BAND[id](P,frame(P));return len(sub(b,a));}
+for(const k in EX){
+  const ex=EX[k]; ex.range={};
+  ex.muscles.forEach(([id])=>{
+    if(!BAND[id]) return;
+    let mn=1e9,mx=-1e9;
+    for(let i=0;i<=40;i++){const l=bandLen(ex,id,i/40);mn=Math.min(mn,l);mx=Math.max(mx,l);}
+    ex.range[id]=[mn,mx];
+  });
+}
+
+/* ---------- 時間軸：向心 / 頂峰停頓 / 離心 / 底部停頓 ---------- */
+const SEG=[{k:"con",d:1.4},{k:"top",d:0.5},{k:"ecc",d:2.0},{k:"bot",d:0.5}];
+const TOTAL=SEG.reduce((s,x)=>s+x.d,0);
+const ease=x=>0.5-0.5*Math.cos(Math.PI*x);
+function phaseAt(t){
+  t=((t%TOTAL)+TOTAL)%TOTAL; let acc=0;
+  for(const s of SEG){
+    if(t<acc+s.d||s===SEG[SEG.length-1]){
+      const l=clamp((t-acc)/s.d,0,1);
+      const p=s.k==="con"?ease(l):s.k==="top"?1:s.k==="ecc"?1-ease(l):0;
+      const sign=s.k==="con"?1:s.k==="ecc"?-1:0;
+      return {k:s.k,l,p,sign};
+    }
+    acc+=s.d;
+  }
+}
+const PH_COLOR={con:"var(--con)",top:"var(--iso)",ecc:"var(--ecc)",bot:"var(--iso)"};
+const PH_NAME={con:"向心期",top:"頂峰停頓",ecc:"離心期",bot:"底部停頓"};
+const ROLE_COLOR={"主動肌":"var(--prime)","協同肌":"var(--syn)","穩定肌":"var(--stab)"};
+const TYPE={con:{t:"向心收縮",c:"var(--con)"},ecc:{t:"離心收縮",c:"var(--ecc)"},iso:{t:"等長收縮",c:"var(--iso)"},stab:{t:"等長穩定",c:"var(--iso)"},dyn:{t:"動態穩定",c:"var(--iso)"}};
+
+function contraction(ex,id,role,ph){
+  if(!BAND[id]) return "iso";
+  const d=(bandLen(ex,id,ph.p+0.01)-bandLen(ex,id,ph.p-0.01))/0.02; // dL/dp
+  const moving=Math.abs(d)>3;
+  if(role==="穩定肌") return moving&&ph.sign!==0?"dyn":"stab";
+  if(ph.sign===0||!moving) return "iso";
+  return ph.sign*d<0?"con":"ecc";
+}
+function targetAct(peak,role,ph){
+  if(role==="穩定肌") return peak*(ph.sign===0?0.75:0.9);
+  return peak*({con:1,top:0.85,ecc:0.72,bot:0.3})[ph.k];
+}
+
+/* ---------- 渲染 ---------- */
+const $=s=>document.querySelector(s);
+const state={ex:"pulldown",t:0,playing:true,speed:1,hover:null,act:{}};
+
+function mirror(svgId,gid){
+  const g=document.getElementById(gid), m=document.createElementNS("http://www.w3.org/2000/svg","g");
+  m.setAttribute("transform","translate(200 0) scale(-1 1)");
+  [...g.children].forEach(c=>m.appendChild(c.cloneNode(true)));
+  g.parentNode.insertBefore(m,g.nextSibling);
+}
+mirror("front","frontHalf"); mirror("back","backHalf");
+
+function seg(a,b,w,cls){
+  return `<line x1="${f1(a.x)}" y1="${f1(a.y)}" x2="${f1(b.x)}" y2="${f1(b.y)}" stroke="var(--skin-stroke)" stroke-width="${w+2}" stroke-linecap="round"/>`+
+         `<line x1="${f1(a.x)}" y1="${f1(a.y)}" x2="${f1(b.x)}" y2="${f1(b.y)}" stroke="var(--skin)" stroke-width="${w}" stroke-linecap="round"/>`;
+}
+function drawBody(P){
+  const pts=[add(P.H,mul(P.n,15)),add(P.S0,mul(P.n,18)),add(P.S0,mul(P.n,-16)),add(P.H,mul(P.n,-15))];
+  const torso=`<path d="M${pts.map(q=>f1(q.x)+","+f1(q.y)).join(" L")} Z" fill="var(--skin)" stroke="var(--skin-stroke)" stroke-width="1.5" stroke-linejoin="round"/>`;
+  const head=add(add(P.S0,mul(P.u,30)),mul(P.n,4));
+  return seg(P.H,P.K,22)+seg(P.K,P.A,15)+seg(P.A,add(P.A,mul(P.foot,17)),8)+
+    `<circle cx="${f1(P.H.x)}" cy="${f1(P.H.y)}" r="16" fill="var(--skin)" stroke="var(--skin-stroke)" stroke-width="1.5"/>`+
+    torso+seg(P.S0,add(P.S0,mul(P.u,16)),10)+
+    `<circle cx="${f1(head.x)}" cy="${f1(head.y)}" r="13" fill="var(--skin)" stroke="var(--skin-stroke)" stroke-width="1.5"/>`+
+    seg(P.S,P.E,14)+seg(P.E,P.W,11)+
+    `<circle cx="${f1(P.S.x)}" cy="${f1(P.S.y)}" r="8" fill="var(--skin)" stroke="var(--skin-stroke)"/>`+
+    `<circle cx="${f1(P.W.x)}" cy="${f1(P.W.y)}" r="6" fill="var(--skin)" stroke="var(--skin-stroke)"/>`;
+}
+
+function buildStatic(){
+  const ex=EX[state.ex];
+  $("#exTitle").textContent=ex.name+" · "+ex.en;
+  document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",b.dataset.ex===state.ex));
+  $("#mbody").innerHTML=ex.muscles.map(([id,role])=>`
+    <tr class="mrow" data-m="${id}">
+      <td class="mname"><b>${MUS[id].n}</b><small>${MUS[id].en}</small></td>
+      <td><span class="role" style="background:${ROLE_COLOR[role]}">${role}</span></td>
+      <td><div class="bar"><span data-bar="${id}"></span></div></td>
+      <td><span class="chip" data-chip="${id}"></span></td>
+      <td class="hide-sm"><div class="bar"><span data-len="${id}" style="background:var(--muted)"></span></div></td>
+    </tr>`).join("");
+  $("#jbody").innerHTML=ex.joints.map(j=>`<tr><td><b>${j[0]}</b></td><td>${j[1]}</td><td>${j[2]}</td></tr>`).join("");
+  $("#cues").innerHTML=ex.cues.map(c=>`<li>${c}</li>`).join("");
+  // 時間軸
+  const pb=$("#phasebar"); pb.querySelectorAll("span").forEach(s=>s.remove());
+  $("#phaselabels").innerHTML="";
+  SEG.forEach(s=>{
+    const sp=document.createElement("span"); sp.style.width=(s.d/TOTAL*100)+"%"; sp.style.background=PH_COLOR[s.k]; sp.style.opacity=s.k==="con"||s.k==="ecc"?1:.45;
+    pb.insertBefore(sp,$("#cursor"));
+    const lb=document.createElement("span"); lb.style.width=(s.d/TOTAL*100)+"%"; lb.textContent=PH_NAME[s.k];
+    $("#phaselabels").appendChild(lb);
+  });
+  // 解剖圖：未參與的肌肉回到灰色
+  document.querySelectorAll("#front .m,#back .m").forEach(el=>{el.style.fill="";});
+  state.act={};
+  document.querySelectorAll("tr.mrow").forEach(r=>{
+    r.addEventListener("mouseenter",()=>setHover(r.dataset.m));
+    r.addEventListener("mouseleave",()=>setHover(null));
+    r.addEventListener("click",()=>setHover(state.hover===r.dataset.m?null:r.dataset.m));
+  });
+}
+function setHover(id){
+  state.hover=id;
+  document.querySelectorAll(".m,.mrow").forEach(el=>el.classList.toggle("hl",!!id&&el.dataset.m===id));
+  if(!state.playing) render(0);
+}
+
+function render(dt){
+  const ex=EX[state.ex], ph=phaseAt(state.t), P=ex.pose(ph.p), F=frame(P);
+  const eq=ex.equip(P,ph.p);
+  $("#equipBack").innerHTML=eq.back;
+  $("#bodyG").innerHTML=drawBody(P);
+  $("#equipFront").innerHTML=eq.front;
+
+  let bands="";
+  const info={};
+  ex.muscles.forEach(([id,role,peak])=>{
+    const tgt=targetAct(peak,role,ph);
+    const prev=state.act[id]??tgt;
+    const a=dt>0?prev+(tgt-prev)*Math.min(1,dt*6):tgt;
+    state.act[id]=a;
+    const type=contraction(ex,id,role,ph);
+    let lenPct=null;
+    if(BAND[id]){
+      const [p1,p2]=BAND[id](P,F), L=len(sub(p2,p1)), [mn,mx]=ex.range[id];
+      lenPct=mx-mn>1?(L-mn)/(mx-mn):0.5;
+      const shorten=1+(1-lenPct)*0.6*(mx-mn>1?1:0);
+      const w=clamp((1.6+a*5.2)*shorten,1.5,11);
+      const col=TYPE[type].c;
+      const hl=state.hover===id;
+      const xy=`x1="${f1(p1.x)}" y1="${f1(p1.y)}" x2="${f1(p2.x)}" y2="${f1(p2.y)}"`;
+      if(hl) bands+=`<line ${xy} stroke="var(--ink)" stroke-width="${f1(w+5)}" stroke-linecap="round" opacity=".35"/>`;
+      bands+=`<line ${xy} data-m="${id}" stroke="${col}" stroke-width="${f1(w)}" stroke-linecap="round" opacity="${f1(hl?1:0.35+a*0.6)}"/>`;
+    }
+    info[id]={a,type,lenPct,role};
+  });
+  $("#bandG").innerHTML=bands;
+
+  // 解剖圖上色
+  ex.muscles.forEach(([id])=>{
+    const pct=Math.round(info[id].a*100);
+    document.querySelectorAll(`#front .m[data-m="${id}"],#back .m[data-m="${id}"]`).forEach(el=>{
+      el.style.fill=`color-mix(in oklab, var(--hot) ${pct}%, var(--idle))`;
+    });
+    const b=document.querySelector(`[data-bar="${id}"]`); if(b) b.style.width=pct+"%";
+    const c=document.querySelector(`[data-chip="${id}"]`);
+    if(c){const T=TYPE[info[id].type]; c.textContent=T.t; c.style.color=T.c;}
+    const l=document.querySelector(`[data-len="${id}"]`);
+    if(l) l.style.width=info[id].lenPct==null?"0%":Math.round(15+info[id].lenPct*85)+"%";
+  });
+  state.info=info;
+
+  const tt=((state.t%TOTAL)+TOTAL)%TOTAL;
+  $("#cursor").style.left=(tt/TOTAL*100)+"%";
+  if(state.playing) $("#scrub").value=Math.round(tt/TOTAL*1000);
+  const pill=$("#phasePill"); pill.textContent=PH_NAME[ph.k]; pill.style.color=PH_COLOR[ph.k];
+  $("#phaseDesc").textContent=ex[ph.k];
+}
+
+/* ---------- 互動 ---------- */
+$("#tabs").innerHTML=Object.entries(EX).map(([k,e])=>`<button class="tab" role="tab" data-ex="${k}">${e.name}<small>${e.en}</small></button>`).join("");
+document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{state.ex=b.dataset.ex;state.t=0;state.hover=null;buildStatic();render(0);}));
+function setPlaying(v){state.playing=v;const b=$("#play");b.textContent=v?"暫停":"播放";b.classList.toggle("on",v);}
+$("#play").addEventListener("click",()=>setPlaying(!state.playing));
+document.querySelectorAll("[data-speed]").forEach(b=>b.addEventListener("click",()=>{
+  state.speed=+b.dataset.speed;document.querySelectorAll("[data-speed]").forEach(x=>x.classList.toggle("on",x===b));
+}));
+$("#scrub").addEventListener("input",e=>{setPlaying(false);state.t=e.target.value/1000*TOTAL;render(0);});
+document.addEventListener("keydown",e=>{if(e.code==="Space"&&e.target.tagName!=="INPUT"){e.preventDefault();setPlaying(!state.playing);}});
+
+const tip=$("#tip");
+document.querySelectorAll("#front,#back,#side").forEach(svg=>{
+  svg.addEventListener("mousemove",e=>{
+    const el=e.target.closest("[data-m]");
+    if(!el){tip.style.opacity=0;return;}
+    const id=el.dataset.m, inf=state.info&&state.info[id];
+    tip.innerHTML=`<b>${MUS[id].n}</b><br>${MUS[id].en}`+(inf?`<br>${inf.role} · 動用 ${Math.round(inf.a*100)}% · ${TYPE[inf.type].t}`:"<br>本動作非主要參與");
+    tip.style.left=Math.min(e.clientX+14,innerWidth-230)+"px"; tip.style.top=(e.clientY+14)+"px"; tip.style.opacity=1;
+  });
+  svg.addEventListener("mouseleave",()=>tip.style.opacity=0);
+});
+
+let last=performance.now();
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  if(state.playing){state.t+=dt*state.speed;render(dt);}
+  requestAnimationFrame(loop);
+}
+buildStatic(); render(0); requestAnimationFrame(loop);
+
+/* 供測試使用的唯讀介面 */
+window.__muscleModel={EX,BAND,phaseAt,contraction,bandLen,TOTAL};
+})();
+</script>
+</body>
+</html>
